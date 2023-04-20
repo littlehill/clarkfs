@@ -24,7 +24,6 @@ SDBlockDevice blockDevice(PA_7, PA_6, PA_5, PA_4);
 FATFileSystem fileSystem("fs");
 char filereadchar=0;
 
-
 void infiniteError(int error) {
     printf("Exit code: %d\r\n", error); 
 
@@ -172,11 +171,15 @@ int main()
     }
 
     printf("numbers:\n");
-    while (!feof(f)) {
+    int count=0;
+    while ((!feof(f)) && (count < 200)) {
         int c = fgetc(f);
         printf("%c", c);
+        count+=1;
     }
+    fflush(stdout);
 
+    printf("\n");
     printf("\rClosing \"/fs/numbers.txt\"... ");
     fflush(stdout);
     err = fclose(f);
@@ -222,4 +225,9 @@ int main()
     printf("\r\n");
     
     printf("Mbed OS filesystem example done!\n");
+
+            // Grab the heap statistics
+        mbed_stats_heap_t heap_stats;
+        mbed_stats_heap_get(&heap_stats);
+        printf("Heap size: %lu / %lu bytes\r\n", heap_stats.current_size, heap_stats.reserved_size);
 }
