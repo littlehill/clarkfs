@@ -1,0 +1,22 @@
+{
+    "requires": [
+        "bare-metal",
+        "sd",
+        "filesystem",
+        "fat_chan",
+        "events",
+        "drivers-usb"
+    ],
+    "target_overrides": {
+      "*": {
+        "target.c_lib": "small",
+        "target.printf_lib": "minimal-printf",
+        "platform.minimal-printf-enable-floating-point": false,
+        "platform.stdio-minimal-console-only": true,
+        "platform.stdio-baud-rate": 115200,
+        "platform.stdio-buffered-serial": 1,
+        "target.components_add": ["SD"],
+        "target.device_has_add": ["USBDEVICE"]
+      }
+    }
+}
