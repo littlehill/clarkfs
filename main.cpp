@@ -18,12 +18,19 @@
 DigitalOut led1(PC_13);
 DigitalOut errled(PB_3);
 
+#define MSGCOUNT 1000
+#define READTSTSIZE 1024
+#define LOOPSIZE 10000
+#define INITBLK 200000
+
+char rxbuffer[1024];
 
 //SDBlockDevice sd(MBED_CONF_SD_SPI_MOSI, MBED_CONF_SD_SPI_MISO, MBED_CONF_SD_SPI_CLK, MBED_CONF_SD_SPI_CS);
 SDBlockDevice blockDevice(PA_7, PA_6, PA_5, PA_4);
 FATFileSystem fileSystem("fs");
 char filereadchar=0;
 
+Timer loctimer;
 
 void infiniteError(int error) {
     printf("Exit code: %d\r\n", error); 
@@ -38,9 +45,12 @@ void infiniteError(int error) {
     }
 }
 
+
+
 // Entry point for the example
 int main()
 {
+    blockDevice.frequency(2000000);
     blockDevice.init();
     printf("sd init done\n");
     printf("--- Mbed OS filesystem example ---\n");
@@ -63,6 +73,45 @@ int main()
         }
     }
 
+    loctimer.start();
+    printf("SD read speed test: \n");
+    printf("  device size: %d\n", (unsigned int)blockDevice.size());
+    printf("  read-blk size: %d\n", (unsigned int)blockDevice.get_read_size());
+    printf("  fill in block with random data\n");
+    for (int rl=0; rl < READTSTSIZE; rl+=1) {
+        rxbuffer[rl] = (char)loctimer.read_us();
+    }
+    loctimer.stop();
+    
+    printf("  -- read %d bytes %d times: \n", READTSTSIZE, LOOPSIZE);
+    int startblock = INITBLK;
+    loctimer.reset();
+    loctimer.start();
+    for (int rl=0; rl < LOOPSIZE; rl+=1) {
+        blockDevice.read(rxbuffer, startblock, READTSTSIZE);
+        startblock += 1;
+    }
+    loctimer.stop();
+    printf("  R Speed: %d kB in %d [ms] \n", (READTSTSIZE*LOOPSIZE/1000), loctimer.read_ms());
+
+    loctimer.start();
+    printf("\n  fill in block with random data\n");
+    for (int rl=0; rl < READTSTSIZE; rl+=1) {
+        rxbuffer[rl] = (char)loctimer.read_us();
+    }
+    loctimer.stop();
+
+    printf("  -- write %d bytes %d times: \n", READTSTSIZE, LOOPSIZE);
+    loctimer.reset();
+    loctimer.start();
+    for (int rl=0; rl < LOOPSIZE; rl+=1) {
+        blockDevice.program(rxbuffer, startblock, READTSTSIZE);
+        startblock -= 1;
+    }
+    loctimer.stop();
+    printf("  W Speed: %d kB in %d [ms] \n", (READTSTSIZE*LOOPSIZE/1000), loctimer.read_ms());
+
+
     // Open the numbers file
     printf("Opening \"/fs/numbers.txt\"... ");
     fflush(stdout);
@@ -79,15 +128,33 @@ int main()
             error("error: %s (%d)\n", strerror(errno), -errno);
         }
 
-        for (int i = 0; i < 10; i++) {
-            printf("\rWriting numbers (%d/%d)... ", i, 10);
-            fflush(stdout);
-            err = fprintf(f, "    %d\n", i);
+        printf("\rWriting fake messages >= 20bytes/msg ");
+        fflush(stdout);
+        
+        loctimer.start();
+        for (int i = 0; i < MSGCOUNT; i++) {
+            err = fprintf(f, "msg %d BAjI5sZ8dvkD60xC30zTeybgzQm1YHfV4Y7sHLEKuJm03bdmkIHNx3AAgZDU7LcUcx8p3pqVp2Dv3mE4vW6ivv4ru1nA5MTsVTljAmZWNWpbULSu1SrVJZor \n", i);
             if (err < 0) {
                 printf("Fail :(\n");
                 error("error: %s (%d)\n", strerror(errno), -errno);
             }
         }
+        loctimer.stop();
+        fprintf(f, "The time to write %d msgs: %d [ms]\n", MSGCOUNT, loctimer.read_ms());
+        printf("The time to write %d msgs: %d [ms]\n", MSGCOUNT, loctimer.read_ms());
+
+
+        // for (int i = 0; i < 10; i++) {
+        //     printf("\rWriting numbers (%d/%d)... ", i, 10);
+        //     fflush(stdout);
+        //     err = fprintf(f, "    %d\n", i);
+        //     if (err < 0) {
+        //         printf("Fail :(\n");
+        //         error("error: %s (%d)\n", strerror(errno), -errno);
+        //     }
+        // }
+
+
 
         printf("\rWriting numbers (%d/%d)... OK\n", 10, 10);
 
@@ -163,27 +230,27 @@ int main()
     }
 
     // Display the numbers file
-    printf("Opening \"/fs/numbers.txt\"... ");
-    fflush(stdout);
-    f = fopen("/fs/numbers.txt", "r");
-    printf("%s\n", (!f ? "Fail :(" : "OK"));
-    if (!f) {
-        error("error: %s (%d)\n", strerror(errno), -errno);
-    }
+    // printf("Opening \"/fs/numbers.txt\"... ");
+    // fflush(stdout);
+    // f = fopen("/fs/numbers.txt", "r");
+    // printf("%s\n", (!f ? "Fail :(" : "OK"));
+    // if (!f) {
+    //     error("error: %s (%d)\n", strerror(errno), -errno);
+    // }
 
-    printf("numbers:\n");
-    while (!feof(f)) {
-        int c = fgetc(f);
-        printf("%c", c);
-    }
+    // printf("numbers:\n");
+    // while (!feof(f)) {
+    //     int c = fgetc(f);
+    //     printf("%c", c);
+    // }
 
-    printf("\rClosing \"/fs/numbers.txt\"... ");
-    fflush(stdout);
-    err = fclose(f);
-    printf("%s\n", (err < 0 ? "Fail :(" : "OK"));
-    if (err < 0) {
-        error("error: %s (%d)\n", strerror(errno), -errno);
-    }
+    // printf("\rClosing \"/fs/numbers.txt\"... ");
+    // fflush(stdout);
+    // err = fclose(f);
+    // printf("%s\n", (err < 0 ? "Fail :(" : "OK"));
+    // if (err < 0) {
+    //     error("error: %s (%d)\n", strerror(errno), -errno);
+    // }
 
     // Tidy up
     printf("Unmounting... ");
