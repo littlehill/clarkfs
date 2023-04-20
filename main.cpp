@@ -21,7 +21,7 @@ DigitalOut errled(PB_3);
 
 //SDBlockDevice sd(MBED_CONF_SD_SPI_MOSI, MBED_CONF_SD_SPI_MISO, MBED_CONF_SD_SPI_CLK, MBED_CONF_SD_SPI_CS);
 SDBlockDevice blockDevice(PA_7, PA_6, PA_5, PA_4);
-FATFileSystem fileSystem("SD");
+FATFileSystem fileSystem("fs");
 char filereadchar=0;
 
 
