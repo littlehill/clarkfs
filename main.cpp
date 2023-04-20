@@ -24,6 +24,7 @@ SDBlockDevice blockDevice(PA_7, PA_6, PA_5, PA_4);
 FATFileSystem fileSystem("fs");
 char filereadchar=0;
 
+Timer benchtimer;
 
 void infiniteError(int error) {
     printf("Exit code: %d\r\n", error); 
@@ -41,6 +42,7 @@ void infiniteError(int error) {
 // Entry point for the example
 int main()
 {
+    blockDevice.frequency(25000000);
     blockDevice.init();
     printf("sd init done\n");
     printf("--- Mbed OS filesystem example ---\n");
@@ -80,9 +82,19 @@ int main()
         }
 
         for (int i = 0; i < 10; i++) {
-            printf("\rWriting numbers (%d/%d)... ", i, 10);
+            printf("\rWriting numbers (%d/%d)... \n", i, 10);
             fflush(stdout);
             err = fprintf(f, "    %d\n", i);
+
+            benchtimer.reset();
+            benchtimer.start();
+            for (int fb=0; fb<1280; fb+=1) {
+                fwrite("KjujMzaOdOppRGQw5l0SP9ei4e5DxMpqFThzNjKX1tj8vYtHSu09qL8Utt8dgoGjVgBExXEXKhCI5svx2Uo0tDvitrHAyene27FY", 100, 1, f);
+            }
+            benchtimer.stop();
+            printf("Benchmark write: ~128kB in %d [ms]\n", benchtimer.read_ms());
+            
+
             if (err < 0) {
                 printf("Fail :(\n");
                 error("error: %s (%d)\n", strerror(errno), -errno);
@@ -98,6 +110,7 @@ int main()
         if (err < 0) {
             error("error: %s (%d)\n", strerror(errno), -errno);
         }
+
     }
 
     // Go through and increment the numbers
@@ -162,28 +175,28 @@ int main()
         error("error: %s (%d)\n", strerror(errno), -errno);
     }
 
-    // Display the numbers file
-    printf("Opening \"/fs/numbers.txt\"... ");
-    fflush(stdout);
-    f = fopen("/fs/numbers.txt", "r");
-    printf("%s\n", (!f ? "Fail :(" : "OK"));
-    if (!f) {
-        error("error: %s (%d)\n", strerror(errno), -errno);
-    }
+    // // Display the numbers file
+    // printf("Opening \"/fs/numbers.txt\"... ");
+    // fflush(stdout);
+    // f = fopen("/fs/numbers.txt", "r");
+    // printf("%s\n", (!f ? "Fail :(" : "OK"));
+    // if (!f) {
+    //     error("error: %s (%d)\n", strerror(errno), -errno);
+    // }
 
-    printf("numbers:\n");
-    while (!feof(f)) {
-        int c = fgetc(f);
-        printf("%c", c);
-    }
+    // printf("numbers:\n");
+    // while (!feof(f)) {
+    //     int c = fgetc(f);
+    //     printf("%c", c);
+    // }
 
-    printf("\rClosing \"/fs/numbers.txt\"... ");
-    fflush(stdout);
-    err = fclose(f);
-    printf("%s\n", (err < 0 ? "Fail :(" : "OK"));
-    if (err < 0) {
-        error("error: %s (%d)\n", strerror(errno), -errno);
-    }
+    // printf("\rClosing \"/fs/numbers.txt\"... ");
+    // fflush(stdout);
+    // err = fclose(f);
+    // printf("%s\n", (err < 0 ? "Fail :(" : "OK"));
+    // if (err < 0) {
+    //     error("error: %s (%d)\n", strerror(errno), -errno);
+    // }
 
     // Tidy up
     printf("Unmounting... ");
